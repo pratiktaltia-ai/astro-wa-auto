@@ -19,6 +19,7 @@ app.get('/', (req, res) => {
 // Webhook endpoint
 app.post('/webhook', async (req, res) => {
   console.log('\n📨 WEBHOOK RECEIVED');
+  console.log('📦 FULL BODY:', JSON.stringify(req.body, null, 2));
   res.status(200).json({ status: 'received' });
 
   try {
@@ -43,7 +44,13 @@ app.post('/webhook', async (req, res) => {
     } else if (body.from && body.text) {
       userPhone = body.from;
       messageText = body.text;
+    } else if (body.waId && body.text) {
+      userPhone = body.waId;
+      messageText = body.text;
     }
+
+    console.log(`📞 Extracted Phone: ${userPhone}`);
+    console.log(`💬 Extracted Text: ${messageText}`);
 
     if (!userPhone || !messageText) {
       console.log('⏭️  No phone/text found, skipping');
