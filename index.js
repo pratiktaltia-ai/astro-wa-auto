@@ -1,9 +1,3 @@
-console.log('IP Debug:', {
-  'x-forwarded-for': req.headers['x-forwarded-for'],
-  remoteAddress: req.connection.remoteAddress,
-  ip: req.ip
-});
-
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
@@ -26,9 +20,12 @@ const netcoreIPs = [
   '139.59.22.149'
 ];
 
-function isFromNetcore(ip) {
-  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', '');
-  return netcoreIPs.includes(ip);
+// Get client IP (use x-forwarded-for first if present)
+function getClientIp(req) {
+  if (req.headers['x-forwarded-for']) {
+    return req.headers['x-forwarded-for'].split(',')[0].trim();
+  }
+  return req.ip || req.connection.remoteAddress || '';
 }
 
 // Load triggers from JSON
@@ -44,8 +41,9 @@ function loadTriggers() {
   }
 }
 loadTriggers();
-setInterval(loadTriggers, 600000); // hot reload every 10 mins
+setInterval(loadTriggers, 60000); // auto reload triggers every 1 min
 
+// Cooldown map : userPhone -> last trigger timestamp
 const userCooldowns = new Map();
 
 app.get('/', (req, res) => {
@@ -53,26 +51,19 @@ app.get('/', (req, res) => {
 });
 
 app.post('/webhook', async (req, res) => {
-  // IP Whitelisting
-  function getClientIp(req) {
-  // Prefer x-forwarded-for (first IP if present), else fallback
-  if (req.headers['x-forwarded-for']) {
-    // Can be a list of IPs, always use the first (real client)
-    return req.headers['x-forwarded-for'].split(',')[0].trim();
-  }
-  return req.ip || req.connection.remoteAddress || '';
-}
+  // Log all IP info (for debugging)
+  console.log('IP Debug:', {
+    'x-forwarded-for': req.headers['x-forwarded-for'],
+    remoteAddress: req.connection.remoteAddress,
+    ip: req.ip
+  });
 
-app.post('/webhook', async (req, res) => {
   const remoteIP = getClientIp(req);
   if (!isFromNetcore(remoteIP)) {
     console.log(`❌ Blocked webhook from non-Netcore IP: ${remoteIP}`);
     res.status(403).send('Forbidden');
     return;
   }
-  // ...rest of handler...
-});
-
 
   const body = req.body;
   let userPhone = null;
