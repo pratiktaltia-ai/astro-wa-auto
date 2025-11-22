@@ -1,0 +1,16 @@
+[
+  {
+    "trigger": "#9962#",
+    "sequence": [
+      { "message": "🔮 Hamare astrologers abhi thode busy hai...", "delay": 2000 },
+      { "message": "Jaise hi woh free honge, aapko update kardiya jayega 🙏", "delay": 3000 },
+      { "message": "💫 Shri. Premanand Ji abhi aapki pratiksha kar rahe hai 👉 https://neoastr.onelink.me/bBHP/optxcyo9", "delay": 6000 }
+    ]
+  },
+  {
+    "trigger": "#9900#",
+    "sequence": [
+      { "message": "Here’s your daily horoscope. Take bold steps today!", "delay": 0 }
+    ]
+  }
+]
