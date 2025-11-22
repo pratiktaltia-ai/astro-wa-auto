@@ -31,7 +31,7 @@ app.post('/webhook', async (req, res) => {
     if (body.incoming_message && body.incoming_message[0]) {
       const message = body.incoming_message[0];
       userPhone = message.from;
-      
+
       // Extract text from text_type object
       if (message.text_type && message.text_type.text) {
         messageText = message.text_type.text;
@@ -71,7 +71,7 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// 3 messages with delay
+// 3 messages with delay, 3rd message is CTA button
 async function sendThreeMessages(userPhone) {
   try {
     // Message 1
@@ -92,11 +92,13 @@ async function sendThreeMessages(userPhone) {
 
     await sleep(2000);
 
-    // Message 3
-    console.log('📤 Message 3/3...');
-    await sendNetcoreMessage(
+    // Message 3 = CTA
+    console.log('📤 Message 3/3 (CTA)...');
+    await sendNetcoreCTAMessage(
       userPhone,
-      '💫 This reading is time-sensitive. Open your app now 👉 https://neoastro.app'
+      "https://yourbrand.com/offer", // <-- your CTA URL
+      "Enjoy 20% off on your first order. Click the button below to shop now!",
+      "Shop Now"
     );
 
     console.log('✅ All 3 messages sent!\n');
@@ -109,7 +111,7 @@ async function sendThreeMessages(userPhone) {
   }
 }
 
-// Send WhatsApp message via Netcore
+// Send WhatsApp text message via Netcore
 async function sendNetcoreMessage(to, text) {
   const response = await axios.post(
     'https://cpaaswa.netcorecloud.net/api/v2/message/nc/message/',
@@ -141,6 +143,64 @@ async function sendNetcoreMessage(to, text) {
   console.log(`   ✓ Sent successfully`);
   console.log(`   Response:`, JSON.stringify(response.data, null, 2));
   return response.data;
+}
+
+// Send WhatsApp CTA button message via Netcore
+async function sendNetcoreCTAMessage(to, ctaUrl, bodyText, buttonText) {
+  try {
+    const response = await axios.post(
+      'https://cpaaswa.netcorecloud.net/api/v2/message/nc/message/',
+      {
+        message: [
+          {
+            cta_link_track: "1",
+            recipient_whatsapp: to,
+            message_type: "interactive",
+            recipient_type: "individual",
+            source: NETCORE_SOURCE,
+            "x-apiheader": "promo_tracking_code",
+            type_interactive: [
+              {
+                type: "cta_url",
+                header: {
+                  type: "text",
+                  url: ctaUrl
+                },
+                body: bodyText,
+                action: [
+                  {
+                    buttons: [
+                      {
+                        name: "shop_now",
+                        parameters: {
+                          display_text: buttonText,
+                          url: ctaUrl
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${NETCORE_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log('   ✓ CTA sent successfully');
+    console.log('   CTA Response:', JSON.stringify(response.data, null, 2));
+    return response.data;
+  } catch (error) {
+    console.error('❌ CTA send error:', error.message);
+    if (error.response) {
+      console.error('❌ CTA error details:', JSON.stringify(error.response.data, null, 2));
+    }
+  }
 }
 
 function sleep(ms) {
