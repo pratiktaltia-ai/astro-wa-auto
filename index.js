@@ -6,7 +6,7 @@ app.use(express.json());
 
 // Get tokens from environment variables
 const NETCORE_API_KEY = process.env.WHATSAPP_TOKEN; // Your Bearer token
-const NETCORE_SOURCE = process.env.PHONE_NUMBER_ID; // Your source ID (like "461089f9-1000-4211-b182-c7f0291f3d45")
+const NETCORE_SOURCE = process.env.PHONE_NUMBER_ID; // Your source ID
 
 // Trigger keyword
 const TRIGGER_KEYWORD = '7358433457';
@@ -120,7 +120,7 @@ async function sendNetcoreMessage(to, text) {
           recipient_type: 'individual',
           message_type: 'text',
           source: NETCORE_SOURCE,
-          x-apiheader: 'astro_automation',
+          'x-apiheader': 'astro_automation',
           type_text: [
             {
               preview_url: 'false',
