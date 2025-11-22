@@ -10,24 +10,6 @@ app.use(express.json());
 const NETCORE_API_KEY = process.env.WHATSAPP_TOKEN;
 const NETCORE_SOURCE = process.env.PHONE_NUMBER_ID;
 
-// Netcore IP whitelist
-const netcoreIPs = [
-  '3.109.231.61',
-  '3.6.178.98',
-  '13.127.49.56',
-  '13.126.62.29',
-  '35.244.61.191',
-  '139.59.22.149'
-];
-
-// Get client IP (use x-forwarded-for first if present)
-function getClientIp(req) {
-  if (req.headers['x-forwarded-for']) {
-    return req.headers['x-forwarded-for'].split(',')[0].trim();
-  }
-  return req.ip || req.connection.remoteAddress || '';
-}
-
 // Load triggers from JSON
 let triggers = [];
 function loadTriggers() {
@@ -43,28 +25,11 @@ function loadTriggers() {
 loadTriggers();
 setInterval(loadTriggers, 60000); // auto reload triggers every 1 min
 
-// Cooldown map : userPhone -> last trigger timestamp
-const userCooldowns = new Map();
-
 app.get('/', (req, res) => {
   res.send('✅ Webhook server is running!');
 });
 
 app.post('/webhook', async (req, res) => {
-  // Log all IP info (for debugging)
-  console.log('IP Debug:', {
-    'x-forwarded-for': req.headers['x-forwarded-for'],
-    remoteAddress: req.connection.remoteAddress,
-    ip: req.ip
-  });
-
-  const remoteIP = getClientIp(req);
-  if (!isFromNetcore(remoteIP)) {
-    console.log(`❌ Blocked webhook from non-Netcore IP: ${remoteIP}`);
-    res.status(403).send('Forbidden');
-    return;
-  }
-
   const body = req.body;
   let userPhone = null;
   let messageText = null;
@@ -86,23 +51,13 @@ app.post('/webhook', async (req, res) => {
     return;
   }
 
-  // Per-user cooldown (1 min)
-  const cooldownMs = 60000;
-  const now = Date.now();
-  const lastTrigger = userCooldowns.get(userPhone) || 0;
-  if (now - lastTrigger < cooldownMs) {
-    res.status(200).json({ status: 'cooldown' });
-    return;
-  }
-  userCooldowns.set(userPhone, now);
-
   // Match trigger
   const matchedTrigger = triggers.find(tg =>
     messageText.toLowerCase().includes(tg.trigger.toLowerCase())
   );
 
   if (matchedTrigger && matchedTrigger.sequence.length) {
-    for (const [i, step] of matchedTrigger.sequence.entries()) {
+    for (const step of matchedTrigger.sequence) {
       if (step.delay && step.delay > 0) await sleep(step.delay);
 
       // Send plain text or CTA based on step
