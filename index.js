@@ -71,7 +71,7 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// 3 messages with delay, 3rd message is CTA button
+// 3 messages with delay, 3rd message is QUICK REPLIES
 async function sendThreeMessages(userPhone) {
   try {
     // Message 1
@@ -92,14 +92,9 @@ async function sendThreeMessages(userPhone) {
 
     await sleep(2000);
 
-    // Message 3 = CTA
-    console.log('📤 Message 3/3 (CTA)...');
-    await sendNetcoreCTAMessage(
-      userPhone,
-      "https://yourbrand.com/offer", // <-- your CTA URL
-      "Enjoy 20% off on your first order. Click the button below to shop now!",
-      "Shop Now"
-    );
+    // Message 3 = QUICK REPLY INTERACTIVE
+    console.log('📤 Message 3/3 (Quick Replies)...');
+    await sendAstroQuickReply(userPhone);
 
     console.log('✅ All 3 messages sent!\n');
   } catch (error) {
@@ -145,36 +140,43 @@ async function sendNetcoreMessage(to, text) {
   return response.data;
 }
 
-// Send WhatsApp CTA button message via Netcore
-async function sendNetcoreCTAMessage(to, ctaUrl, bodyText, buttonText) {
+// Send WhatsApp Quick Reply (button) message via Netcore
+async function sendAstroQuickReply(to) {
   try {
     const response = await axios.post(
       'https://cpaaswa.netcorecloud.net/api/v2/message/nc/message/',
       {
         message: [
           {
-            cta_link_track: "1",
             recipient_whatsapp: to,
             message_type: "interactive",
             recipient_type: "individual",
             source: NETCORE_SOURCE,
-            "x-apiheader": "promo_tracking_code",
+            "x-apiheader": "astro_quickreply_test",
             type_interactive: [
               {
-                type: "cta_url",
+                type: "button",
                 header: {
                   type: "text",
-                  url: ctaUrl
+                  text: "🪐 Astrology Quick Check"
                 },
-                body: bodyText,
+                body: "Would you like to receive today's personalized astrology reading?",
+                footer: "Choose an option below",
                 action: [
                   {
                     buttons: [
                       {
-                        name: "shop_now",
-                        parameters: {
-                          display_text: buttonText,
-                          url: ctaUrl
+                        type: "reply",
+                        reply: {
+                          id: "astro_yes",
+                          title: "Yes, send it"
+                        }
+                      },
+                      {
+                        type: "reply",
+                        reply: {
+                          id: "astro_no",
+                          title: "No, thanks"
                         }
                       }
                     ]
@@ -192,13 +194,13 @@ async function sendNetcoreCTAMessage(to, ctaUrl, bodyText, buttonText) {
         }
       }
     );
-    console.log('   ✓ CTA sent successfully');
-    console.log('   CTA Response:', JSON.stringify(response.data, null, 2));
+    console.log('   ✓ Quick Reply sent successfully');
+    console.log('   Quick Reply Response:', JSON.stringify(response.data, null, 2));
     return response.data;
   } catch (error) {
-    console.error('❌ CTA send error:', error.message);
+    console.error('❌ Quick Reply send error:', error.message);
     if (error.response) {
-      console.error('❌ CTA error details:', JSON.stringify(error.response.data, null, 2));
+      console.error('❌ Quick Reply error details:', JSON.stringify(error.response.data, null, 2));
     }
   }
 }
