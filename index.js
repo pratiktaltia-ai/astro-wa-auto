@@ -4,19 +4,17 @@ const app = express();
 
 app.use(express.json());
 
-// Get tokens from environment variables
-const NETCORE_API_KEY = process.env.WHATSAPP_TOKEN; // Your Bearer token
-const NETCORE_SOURCE = process.env.PHONE_NUMBER_ID; // Your source ID
+// Env tokens from Render/.env
+const NETCORE_API_KEY = process.env.WHATSAPP_TOKEN;
+const NETCORE_SOURCE = process.env.PHONE_NUMBER_ID;
 
-// Trigger keyword
-const TRIGGER_KEYWORD = '7358433457';
+// NEW trigger keyword
+const TRIGGER_KEYWORD = '#0099#';
 
-// Test endpoint for server check
 app.get('/', (req, res) => {
   res.send('✅ Webhook server is running!');
 });
 
-// Webhook endpoint
 app.post('/webhook', async (req, res) => {
   console.log('\n📨 WEBHOOK RECEIVED');
   console.log('📦 FULL BODY:', JSON.stringify(req.body, null, 2));
@@ -27,17 +25,15 @@ app.post('/webhook', async (req, res) => {
     let userPhone = null;
     let messageText = null;
 
-    // Check for Netcore format (incoming_message array)
+    // Netcore format
     if (body.incoming_message && body.incoming_message[0]) {
       const message = body.incoming_message[0];
       userPhone = message.from;
-
-      // Extract text from text_type object
       if (message.text_type && message.text_type.text) {
         messageText = message.text_type.text;
       }
     }
-    // Fallback to simple format (for testing)
+    // Fallback/simple
     else if (body.from && body.text) {
       userPhone = body.from;
       messageText = body.text;
@@ -51,52 +47,49 @@ app.post('/webhook', async (req, res) => {
       return;
     }
 
-    console.log(`📞 From: ${userPhone}`);
-    console.log(`💬 Message: "${messageText}"`);
-
     if (messageText.includes(TRIGGER_KEYWORD)) {
-      console.log(`✅ KEYWORD MATCHED! Sending 3 messages...`);
+      console.log(`✅ Trigger matched! Sending 3 astrology messages...`);
 
       if (!NETCORE_API_KEY || !NETCORE_SOURCE) {
         console.log('⚠️  Tokens not configured in Secrets');
         return;
       }
 
-      await sendThreeMessages(userPhone);
+      await sendThreeAstroMessages(userPhone);
     } else {
-      console.log(`⏭️  Keyword not found. Received: "${messageText}"`);
+      console.log(`⏭️  Trigger not matched. Received: "${messageText}"`);
     }
   } catch (error) {
     console.error('❌ Error:', error.message);
   }
 });
 
-// 3 messages with delay, 3rd message is QUICK REPLIES
-async function sendThreeMessages(userPhone) {
+async function sendThreeAstroMessages(userPhone) {
   try {
-    // Message 1
+    // 1️⃣
     console.log('📤 Message 1/3...');
     await sendNetcoreMessage(
       userPhone,
-      '✨ Your stars are aligning in a powerful way today...'
+      '🔍 Jyotish Premanand ji ki availability check ho rahi hai…'
     );
-
     await sleep(2000);
 
-    // Message 2
+    // 2️⃣
     console.log('📤 Message 2/3...');
     await sendNetcoreMessage(
       userPhone,
-      '🔮 Our astrologer discovered something fascinating about your birth chart...'
+      '⏳ Woh abhi kisi aur vyakti ke saath busy hain. Jaise hi free honge, aapko turant update milega.'
+    );
+    await sleep(5000);
+
+    // 3️⃣
+    console.log('📤 Message 3/3...');
+    await sendNetcoreMessage(
+      userPhone,
+      '✨ Jyotishi Premanand ji ab free hain — aapka intezaar kar rahe hain! https://neoastr.onelink.me/bBHP/optxcyo9'
     );
 
-    await sleep(2000);
-
-    // Message 3 = QUICK REPLY INTERACTIVE
-    console.log('📤 Message 3/3 (Quick Replies)...');
-    await sendAstroQuickReply(userPhone);
-
-    console.log('✅ All 3 messages sent!\n');
+    console.log('✅ All 3 astrology messages sent!\n');
   } catch (error) {
     console.error('❌ Failed:', error.message);
     if (error.response) {
@@ -140,79 +133,13 @@ async function sendNetcoreMessage(to, text) {
   return response.data;
 }
 
-// Send WhatsApp Quick Reply (button) message via Netcore
-async function sendAstroQuickReply(to) {
-  try {
-    const response = await axios.post(
-      'https://cpaaswa.netcorecloud.net/api/v2/message/nc/message/',
-      {
-        message: [
-          {
-            recipient_whatsapp: to,
-            message_type: "interactive",
-            recipient_type: "individual",
-            source: NETCORE_SOURCE,
-            "x-apiheader": "astro_quickreply_test",
-            type_interactive: [
-              {
-                type: "button",
-                header: {
-                  type: "text",
-                  text: "🪐 Astrology Quick Check"
-                },
-                body: "Would you like to receive today's personalized astrology reading?",
-                footer: "Choose an option below",
-                action: [
-                  {
-                    buttons: [
-                      {
-                        type: "reply",
-                        reply: {
-                          id: "astro_yes",
-                          title: "Yes, send it"
-                        }
-                      },
-                      {
-                        type: "reply",
-                        reply: {
-                          id: "astro_no",
-                          title: "No, thanks"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${NETCORE_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    console.log('   ✓ Quick Reply sent successfully');
-    console.log('   Quick Reply Response:', JSON.stringify(response.data, null, 2));
-    return response.data;
-  } catch (error) {
-    console.error('❌ Quick Reply send error:', error.message);
-    if (error.response) {
-      console.error('❌ Quick Reply error details:', JSON.stringify(error.response.data, null, 2));
-    }
-  }
-}
-
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log('\n🚀 Webhook Server Running!');
-  console.log(`🔑 Trigger keyword: "${TRIGGER_KEYWORD}"`);
+  console.log(`🔑 Astro Trigger keyword: "${TRIGGER_KEYWORD}"`);
   console.log('⏳ Waiting for messages...\n');
 });
