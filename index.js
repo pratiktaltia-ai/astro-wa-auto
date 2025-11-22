@@ -1,3 +1,9 @@
+console.log('IP Debug:', {
+  'x-forwarded-for': req.headers['x-forwarded-for'],
+  remoteAddress: req.connection.remoteAddress,
+  ip: req.ip
+});
+
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
@@ -48,12 +54,25 @@ app.get('/', (req, res) => {
 
 app.post('/webhook', async (req, res) => {
   // IP Whitelisting
-  const remoteIP = req.ip || req.connection.remoteAddress || '';
+  function getClientIp(req) {
+  // Prefer x-forwarded-for (first IP if present), else fallback
+  if (req.headers['x-forwarded-for']) {
+    // Can be a list of IPs, always use the first (real client)
+    return req.headers['x-forwarded-for'].split(',')[0].trim();
+  }
+  return req.ip || req.connection.remoteAddress || '';
+}
+
+app.post('/webhook', async (req, res) => {
+  const remoteIP = getClientIp(req);
   if (!isFromNetcore(remoteIP)) {
     console.log(`❌ Blocked webhook from non-Netcore IP: ${remoteIP}`);
     res.status(403).send('Forbidden');
     return;
   }
+  // ...rest of handler...
+});
+
 
   const body = req.body;
   let userPhone = null;
