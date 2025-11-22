@@ -5,8 +5,8 @@ const app = express();
 app.use(express.json());
 
 // Get tokens from environment variables
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+const NETCORE_API_KEY = process.env.WHATSAPP_TOKEN; // Your Bearer token
+const NETCORE_SOURCE = process.env.PHONE_NUMBER_ID; // Your source ID (like "461089f9-1000-4211-b182-c7f0291f3d45")
 
 // Trigger keyword
 const TRIGGER_KEYWORD = '7358433457';
@@ -27,25 +27,19 @@ app.post('/webhook', async (req, res) => {
     let userPhone = null;
     let messageText = null;
 
-    // Extract phone and message text
-    if (body.entry && body.entry[0]?.changes?.[0]?.value?.messages?.[0]) {
-      const message = body.entry[0].changes[0].value.messages[0];
+    // Check for Netcore format (incoming_message array)
+    if (body.incoming_message && body.incoming_message[0]) {
+      const message = body.incoming_message[0];
       userPhone = message.from;
-      if (message.type === 'text') {
-        messageText = message.text.body;
-      } else if (
-        message.type === 'interactive' &&
-        message.interactive?.type === 'button_reply'
-      ) {
-        messageText =
-          message.interactive.button_reply.title ||
-          message.interactive.button_reply.id;
+      
+      // Extract text from text_type object
+      if (message.text_type && message.text_type.text) {
+        messageText = message.text_type.text;
       }
-    } else if (body.from && body.text) {
+    }
+    // Fallback to simple format (for testing)
+    else if (body.from && body.text) {
       userPhone = body.from;
-      messageText = body.text;
-    } else if (body.waId && body.text) {
-      userPhone = body.waId;
       messageText = body.text;
     }
 
@@ -63,7 +57,7 @@ app.post('/webhook', async (req, res) => {
     if (messageText.includes(TRIGGER_KEYWORD)) {
       console.log(`✅ KEYWORD MATCHED! Sending 3 messages...`);
 
-      if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
+      if (!NETCORE_API_KEY || !NETCORE_SOURCE) {
         console.log('⚠️  Tokens not configured in Secrets');
         return;
       }
@@ -82,7 +76,7 @@ async function sendThreeMessages(userPhone) {
   try {
     // Message 1
     console.log('📤 Message 1/3...');
-    await sendWhatsAppMessage(
+    await sendNetcoreMessage(
       userPhone,
       '✨ Your stars are aligning in a powerful way today...'
     );
@@ -91,7 +85,7 @@ async function sendThreeMessages(userPhone) {
 
     // Message 2
     console.log('📤 Message 2/3...');
-    await sendWhatsAppMessage(
+    await sendNetcoreMessage(
       userPhone,
       '🔮 Our astrologer discovered something fascinating about your birth chart...'
     );
@@ -100,7 +94,7 @@ async function sendThreeMessages(userPhone) {
 
     // Message 3
     console.log('📤 Message 3/3...');
-    await sendWhatsAppMessage(
+    await sendNetcoreMessage(
       userPhone,
       '💫 This reading is time-sensitive. Open your app now 👉 https://neoastro.app'
     );
@@ -108,28 +102,44 @@ async function sendThreeMessages(userPhone) {
     console.log('✅ All 3 messages sent!\n');
   } catch (error) {
     console.error('❌ Failed:', error.message);
+    if (error.response) {
+      console.error('❌ Response status:', error.response.status);
+      console.error('❌ Response data:', JSON.stringify(error.response.data, null, 2));
+    }
   }
 }
 
-// Send WhatsApp message
-async function sendWhatsAppMessage(to, text) {
+// Send WhatsApp message via Netcore
+async function sendNetcoreMessage(to, text) {
   const response = await axios.post(
-    `https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`,
+    'https://cpaaswa.netcorecloud.net/api/v2/message/nc/message/',
     {
-      messaging_product: 'whatsapp',
-      to: to,
-      type: 'text',
-      text: { body: text }
+      message: [
+        {
+          recipient_whatsapp: to,
+          recipient_type: 'individual',
+          message_type: 'text',
+          source: NETCORE_SOURCE,
+          x-apiheader: 'astro_automation',
+          type_text: [
+            {
+              preview_url: 'false',
+              content: text
+            }
+          ]
+        }
+      ]
     },
     {
       headers: {
-        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+        Authorization: `Bearer ${NETCORE_API_KEY}`,
         'Content-Type': 'application/json'
       }
     }
   );
 
-  console.log(`   ✓ Sent (ID: ${response.data.messages[0].id})`);
+  console.log(`   ✓ Sent successfully`);
+  console.log(`   Response:`, JSON.stringify(response.data, null, 2));
   return response.data;
 }
 
