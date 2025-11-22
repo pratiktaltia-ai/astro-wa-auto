@@ -1,0 +1,19 @@
+[
+  {
+    "trigger": "#9962#",
+    "sequence": [
+      { "message": "🔍 Jyotish Premanand ji ki availability check ho rahi hai…...", "delay": 0 },
+      { "message": "⏳ Woh abhi kisi aur vyakti ke saath busy hain. Jaise hi free honge, aapko turant update milega.", "delay": 4000 },
+      {
+        "message": {
+          "type": "cta",
+          "cta_link_track": "1",
+          "cta_url": "https://neoastr.onelink.me/bBHP/optxcyo9",
+          "body": "✨ Jyotishi Premanand ji ab free hain — aapka intezaar kar rahe hain!",
+          "button_text": "Chat Now"
+        },
+        "delay": 5000
+      }
+    ]
+  }
+]
