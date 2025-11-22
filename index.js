@@ -34,7 +34,7 @@ app.post('/webhook', async (req, res) => {
   let userPhone = null;
   let messageText = null;
 
-  // Extract Netcore payload
+  // Netcore payload extraction
   if (body.incoming_message && body.incoming_message[0]) {
     const message = body.incoming_message[0];
     userPhone = message.from;
@@ -51,7 +51,7 @@ app.post('/webhook', async (req, res) => {
     return;
   }
 
-  // Match trigger
+  // Match trigger and send sequence
   const matchedTrigger = triggers.find(tg =>
     messageText.toLowerCase().includes(tg.trigger.toLowerCase())
   );
