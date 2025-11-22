@@ -38,7 +38,7 @@ function loadTriggers() {
   }
 }
 loadTriggers();
-setInterval(loadTriggers, 60000); // hot reload every 1 min
+setInterval(loadTriggers, 600000); // hot reload every 10 mins
 
 const userCooldowns = new Map();
 
